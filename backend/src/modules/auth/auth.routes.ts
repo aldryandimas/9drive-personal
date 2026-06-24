@@ -15,6 +15,9 @@ const registerSchema = z.object({ name: z.string().min(2), email: z.string().ema
 const loginSchema = z.object({ email: z.string().email(), password: z.string().min(1) })
 const refreshSchema = z.object({ refreshToken: z.string().min(1) })
 const googleExchangeSchema = z.object({ token: z.string().min(1) })
+const forgotPasswordSchema = z.object({ email: z.string().email() })
+const resetPasswordSchema = z.object({ token: z.string().min(1), password: z.string().min(8) })
+const changePasswordSchema = z.object({ currentPassword: z.string().min(1), newPassword: z.string().min(8) })
 
 async function createSession(userId: string, req: AuthRequest) {
   const refreshToken = randomToken()
@@ -190,6 +193,69 @@ authRouter.get('/me', requireAuth, async (req: AuthRequest, res, next) => {
   try {
     const user = await prisma.user.findUniqueOrThrow({ where: { id: req.user!.id }, select: { id: true, name: true, email: true, status: true } })
     return res.json({ user })
+  } catch (error) {
+    return next(error)
+  }
+})
+
+// POST /auth/forgot-password — create a reset token (returns token in response since no email service)
+authRouter.post('/forgot-password', async (req, res, next) => {
+  try {
+    const body = forgotPasswordSchema.parse(req.body)
+    const user = await prisma.user.findUnique({ where: { email: body.email } })
+    // Always return 200 to avoid email enumeration
+    if (!user) return res.json({ message: 'If that email exists, a reset link has been sent.' })
+    // Invalidate any existing unused tokens for this user
+    await prisma.passwordResetToken.updateMany({
+      where: { userId: user.id, usedAt: null, expiresAt: { gt: new Date() } },
+      data: { usedAt: new Date() },
+    })
+    const token = randomToken()
+    await prisma.passwordResetToken.create({
+      data: {
+        userId: user.id,
+        tokenHash: hashToken(token),
+        expiresAt: new Date(Date.now() + 60 * 60_000), // 1 hour
+      },
+    })
+    const resetUrl = `${env.FRONTEND_URL}/reset-password?token=${token}`
+    // In production you would email resetUrl; for now return it directly
+    return res.json({ message: 'Reset token created.', resetUrl })
+  } catch (error) {
+    return next(error)
+  }
+})
+
+// POST /auth/reset-password — consume token and set new password
+authRouter.post('/reset-password', async (req, res, next) => {
+  try {
+    const body = resetPasswordSchema.parse(req.body)
+    const record = await prisma.passwordResetToken.findUnique({ where: { tokenHash: hashToken(body.token) } })
+    if (!record || record.usedAt || record.expiresAt < new Date()) {
+      return res.status(400).json({ code: 'RESET_TOKEN_INVALID', message: 'Reset link is invalid or has expired.' })
+    }
+    await prisma.$transaction([
+      prisma.user.update({ where: { id: record.userId }, data: { passwordHash: await hashPassword(body.password) } }),
+      prisma.passwordResetToken.update({ where: { id: record.id }, data: { usedAt: new Date() } }),
+      // Revoke all active sessions so old sessions can't be reused
+      prisma.userSession.updateMany({ where: { userId: record.userId, revokedAt: null }, data: { revokedAt: new Date() } }),
+    ])
+    return res.json({ message: 'Password has been reset. Please log in.' })
+  } catch (error) {
+    return next(error)
+  }
+})
+
+// POST /auth/change-password — authenticated user changes their own password
+authRouter.post('/change-password', requireAuth, async (req: AuthRequest, res, next) => {
+  try {
+    const body = changePasswordSchema.parse(req.body)
+    const user = await prisma.user.findUniqueOrThrow({ where: { id: req.user!.id } })
+    if (!(await verifyPassword(user.passwordHash, body.currentPassword))) {
+      return res.status(400).json({ code: 'INVALID_CURRENT_PASSWORD', message: 'Current password is incorrect.' })
+    }
+    await prisma.user.update({ where: { id: user.id }, data: { passwordHash: await hashPassword(body.newPassword) } })
+    return res.json({ message: 'Password updated successfully.' })
   } catch (error) {
     return next(error)
   }

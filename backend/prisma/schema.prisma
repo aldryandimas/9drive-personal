@@ -30,6 +30,7 @@ model User {
   workspaceInvitesSent WorkspaceInvite[] @relation("WorkspaceInvitesSent")
   uploadRoutingPolicy UploadRoutingPolicy?
   apiKeys       ApiKey[]
+  passwordResetTokens PasswordResetToken[]
 
   @@map("users")
 }
@@ -325,6 +326,19 @@ model AuditLog {
 
   @@index([userId])
   @@map("audit_logs")
+}
+
+model PasswordResetToken {
+  id        String    @id @default(uuid()) @db.Char(36)
+  userId    String    @map("user_id") @db.Char(36)
+  tokenHash String    @unique @map("token_hash") @db.VarChar(255)
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("password_reset_tokens")
 }
 
 model WorkspaceInvite {
