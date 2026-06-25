@@ -5,13 +5,11 @@ import { AllFilesPage } from '@/pages/AllFilesPage'
 import { ArchivedPage } from '@/pages/ArchivedPage'
 import { ChangePasswordPage } from '@/pages/ChangePasswordPage'
 import { LoginPage } from '@/pages/LoginPage'
-import { ForgotPasswordPage } from '@/pages/ForgotPasswordPage'
 import { GoogleAuthPage } from '@/pages/GoogleAuthPage'
 import { GoogleConnectedPage } from '@/pages/GoogleConnectedPage'
 import { QuotaTrackerPage } from '@/pages/QuotaTrackerPage'
 import { RecentPage } from '@/pages/RecentPage'
 import { RegisterPage } from '@/pages/RegisterPage'
-import { ResetPasswordPage } from '@/pages/ResetPasswordPage'
 import { SettingsPage } from '@/pages/SettingsPage'
 import { SharedPage } from '@/pages/SharedPage'
 import { StarredPage } from '@/pages/StarredPage'
@@ -23,8 +21,6 @@ function App() {
     <Routes>
       <Route path="login" element={<LoginPage />} />
       <Route path="register" element={<RegisterPage />} />
-      <Route path="forgot-password" element={<ForgotPasswordPage />} />
-      <Route path="reset-password" element={<ResetPasswordPage />} />
       <Route path="google-auth" element={<GoogleAuthPage />} />
       <Route path="google-connected" element={<GoogleConnectedPage />} />
       <Route path="public/files/:token" element={<PublicFilePage />} />
