@@ -1,7 +1,7 @@
 import { MoreVertical } from 'lucide-react'
 import type { MouseEvent } from 'react'
 import { Card } from '@/components/ui/card'
-import { FileIcon } from '@/components/drive/FileIcon'
+import { FileThumbnail } from '@/components/drive/FileThumbnail'
 import type { FileItem } from '@/data/drive-data'
 
 export function FileGrid({ files, selectedFileIds = new Set<string>(), onFileContextMenu, onToggleFile }: { files: FileItem[]; selectedFileIds?: Set<string>; onFileContextMenu?: (event: MouseEvent<HTMLElement>, file: FileItem) => void; onToggleFile?: (file: FileItem) => void }) {
@@ -17,8 +17,8 @@ export function FileGrid({ files, selectedFileIds = new Set<string>(), onFileCon
             </div>
 
             <div className="mt-5 flex justify-center">
-              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100 text-slate-700 sm:h-20 sm:w-20">
-                <FileIcon kind={file.kind} className="h-9 w-9 rounded-xl p-2 sm:h-11 sm:w-11" />
+              <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl bg-slate-100 text-slate-700 sm:h-20 sm:w-20">
+                <FileThumbnail file={file} iconClassName="h-9 w-9 rounded-xl p-2 sm:h-11 sm:w-11" />
               </div>
             </div>
 
