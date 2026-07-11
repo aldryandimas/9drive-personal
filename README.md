@@ -48,6 +48,132 @@ backend/   Express API, Prisma schema, Google Drive integration
 frontend/  Vite React app
 ```
 
+## Tech Stack
+
+```txt
+Frontend:  React + Vite
+Backend:   Express + TypeScript
+Database:  MySQL (Prisma)
+```
+
+## Production Deployment
+
+This project is deployed across three free-tier services:
+
+| Layer | Service | URL |
+|---|---|---|
+| Frontend | ![Vercel](https://cdn.simpleicons.org/vercel) Vercel | `https://9drive-personal.vercel.app` |
+| Backend | ![Render](https://cdn.simpleicons.org/render) Render (Free) | `https://ninedrive-personal.onrender.com` |
+| Database | ![Aiven](https://aiven.io/favicon.ico) Aiven MySQL (Free) | `mysql-211103f7-deschara-9drive.e.aivencloud.com:24446` |
+
+> **Note:** Render free instances spin down after periods of inactivity. The first request after idle may take 30–60 seconds to respond. This is acceptable for personal use.
+
+### 1. Database — Aiven MySQL
+
+1. Sign up at [aiven.io](https://aiven.io) (no credit card required for free tier).
+2. Create a new project and add a **MySQL** service.
+3. Select plan **Free-1-1gb** and region **Asia Pacific**.
+4. Once the service is **Running**, note the connection details:
+
+```txt
+Host     : <your-service>.aivencloud.com
+Port     : <random-port>
+User     : avnadmin
+Password : <generated-password>
+Database : defaultdb
+SSL      : REQUIRED
+```
+
+5. Export your existing MySQL database:
+
+```bash
+mysqldump \
+  -h <old-host> \
+  -P <old-port> \
+  -u <old-user> \
+  -p<old-password> \
+  <old-database> > backup.sql
+```
+
+6. Import into Aiven:
+
+```bash
+mysql \
+  -h <aiven-host> \
+  -P <aiven-port> \
+  -u avnadmin \
+  -p<aiven-password> \
+  --ssl-mode=REQUIRED \
+  defaultdb < backup.sql
+```
+
+### 2. Backend — Render
+
+1. Sign up at [render.com](https://render.com) (credit card required for verification, free tier is not charged).
+2. Create a new **Web Service** and connect your GitHub repository.
+3. Configure the service:
+
+```txt
+Language        : Docker
+Branch          : main
+Root Directory  : backend
+Dockerfile Path : ./Dockerfile
+Region          : Singapore (Southeast Asia)
+Instance Type   : Free
+Port            : 4000
+```
+
+4. Add the following **Environment Variables**:
+
+```env
+DATABASE_URL=mysql://avnadmin:<password>@<aiven-host>:<aiven-port>/defaultdb?ssl-mode=REQUIRED
+APP_PORT=4000
+FRONTEND_URL=https://<your-vercel-url>.vercel.app
+JWT_ACCESS_SECRET=<long-random-secret>
+TOKEN_ENCRYPTION_KEY=<long-random-secret>
+ACCESS_TOKEN_TTL_SECONDS=900
+REFRESH_TOKEN_TTL_DAYS=30
+MAX_UPLOAD_BYTES=5368709120
+GOOGLE_CLIENT_ID=<your-google-client-id>
+GOOGLE_CLIENT_SECRET=<your-google-client-secret>
+GOOGLE_REDIRECT_URI=https://<your-render-url>.onrender.com/connected-accounts/google/callback
+```
+
+5. Click **Deploy Web Service**. Once live, your backend URL will be in the format:
+```
+https://<service-name>.onrender.com
+```
+
+### 3. Frontend — Vercel
+
+Frontend deployment is standard Vite on Vercel. The key environment variable to set:
+
+```env
+VITE_API_URL=https://<your-render-url>.onrender.com
+```
+
+After updating `VITE_API_URL`, trigger a **Redeploy** in the Vercel dashboard so the new backend URL is embedded into the frontend build.
+
+### 4. Google OAuth — Update Authorized URIs
+
+After obtaining the Render and Vercel URLs, update the OAuth client in [Google Cloud Console](https://console.cloud.google.com):
+
+**Authorized JavaScript Origins:**
+```
+https://<your-vercel-url>.vercel.app
+```
+
+**Authorized Redirect URIs:**
+```
+https://<your-render-url>.onrender.com/connected-accounts/google/callback
+```
+
+> Google OAuth changes may take up to a few hours to propagate.
+
+### 5. Re-seed Google OAuth Config
+
+After deploying, the Google OAuth config stored in the database needs to reflect the new redirect URI. Trigger a re-seed by redeploying the backend with the updated `GOOGLE_REDIRECT_URI` env var — the Docker startup script runs `seed:google-config` automatically if credentials are present.
+
 ## Requirements
 
 - Node.js 20+
