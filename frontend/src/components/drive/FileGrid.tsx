@@ -4,13 +4,13 @@ import { Card } from '@/components/ui/card'
 import { FileThumbnail } from '@/components/drive/FileThumbnail'
 import type { FileItem } from '@/data/drive-data'
 
-export function FileGrid({ files, selectedFileIds = new Set<string>(), onFileContextMenu, onToggleFile }: { files: FileItem[]; selectedFileIds?: Set<string>; onFileContextMenu?: (event: MouseEvent<HTMLElement>, file: FileItem) => void; onToggleFile?: (file: FileItem) => void }) {
+export function FileGrid({ files, selectedFileIds = new Set<string>(), onFileContextMenu, onToggleFile, onOpenFile }: { files: FileItem[]; selectedFileIds?: Set<string>; onFileContextMenu?: (event: MouseEvent<HTMLElement>, file: FileItem) => void; onToggleFile?: (file: FileItem) => void; onOpenFile?: (file: FileItem) => void }) {
   return (
     <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
       {files.map((file) => {
         const selected = selectedFileIds.has(file.id ?? '')
         return (
-          <Card key={file.id ?? file.name} onClick={() => onToggleFile?.(file)} onContextMenu={(event) => onFileContextMenu?.(event, file)} className={selected ? 'relative cursor-pointer overflow-hidden border-blue-200 bg-blue-50 p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md' : 'relative cursor-pointer overflow-hidden p-4 transition hover:-translate-y-0.5 hover:shadow-md'}>
+          <Card key={file.id ?? file.name} onClick={() => onOpenFile?.(file)} onContextMenu={(event) => onFileContextMenu?.(event, file)} className={selected ? 'relative cursor-pointer overflow-hidden border-blue-200 bg-blue-50 p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md' : 'relative cursor-pointer overflow-hidden p-4 transition hover:-translate-y-0.5 hover:shadow-md'}>
             <div className="flex items-start justify-between gap-2">
               <input type="checkbox" className="h-5 w-5 shrink-0 accent-blue-600" checked={selected} onChange={() => onToggleFile?.(file)} onClick={(event) => event.stopPropagation()} />
               <button className="-mr-2 -mt-2 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-slate-500 hover:bg-white/80" onClick={(event) => { event.stopPropagation(); onFileContextMenu?.(event, file) }} aria-label={`Open ${file.name} menu`}><MoreVertical className="h-5 w-5" /></button>
